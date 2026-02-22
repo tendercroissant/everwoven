@@ -1,98 +1,553 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+/**
+ * Home — "The Weave" Home Screen
+ * iOS-style large-title collapsing header:
+ *   • Large title lives inside the scroll content and fades out on scroll
+ *   • A compact sticky navbar with the same title fades + slides in
+ *   • Bottom safe area removed so content flows beneath the floating nav
+ */
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { Brand, Layout } from '@/constants/theme';
+import { useRouter } from 'expo-router';
+import { Bell, Camera, Heart, Plus, Sparkles, User } from 'lucide-react-native';
+import React, { useEffect, useRef } from 'react';
+import {
+  Animated,
+  Image,
+  Platform,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-export default function HomeScreen() {
+// ─── Palette (cool off-white — matches Journal List) ────────────────────────
+const Beige = {
+  bg: '#F4F4F8',
+  card: '#FFFFFF',
+  cardDeep: '#EEF0F6',
+  text: Brand.navy,
+  muted: Brand.mutedGrey,
+  accent: Brand.blue,
+};
+
+// The scroll offset at which the compact navbar is fully opaque
+const COLLAPSE_THRESHOLD = 72;
+
+// ─── Mock data ───────────────────────────────────────────────────────────────
+const DAYS_TOGETHER = 740;
+const HAS_NOTIFICATIONS = true;
+const IS_SUBSCRIBED = false;
+
+const RECENT = [
+  {
+    id: '1',
+    type: 'journal',
+    label: 'JOURNAL',
+    title: 'Morning Coffee at The Roast',
+    meta: 'Yesterday',
+    shared: true,
+  },
+  {
+    id: '2',
+    type: 'moment',
+    label: 'MOMENT',
+    title: 'Sunday Picnic',
+    meta: '3 days ago',
+    shared: true,
+    imageUrl: 'https://picsum.photos/seed/picnic/600/400',
+  },
+  {
+    id: '3',
+    type: 'journal',
+    label: 'JOURNAL',
+    title: 'Late Night Thoughts',
+    meta: '1 week ago',
+    shared: false,
+  },
+  {
+    id: '4',
+    type: 'moment',
+    label: 'MOMENT',
+    title: 'Autumn Walk in the Park',
+    meta: '2 weeks ago',
+    shared: true,
+    imageUrl: 'https://picsum.photos/seed/autumn/600/400',
+  },
+];
+
+// ─── Premium promo banner ───────────────────────────────────────────────────
+
+function PremiumPromoBanner({ onPress }: { onPress: () => void }) {
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
-
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <TouchableOpacity style={promo.card} onPress={onPress} activeOpacity={0.82}>
+      <View style={promo.left}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 4 }}>
+          <Sparkles size={11} color={Beige.accent} strokeWidth={Brand.iconStrokeWidth} />
+          <Text style={[promo.eyebrow, { marginBottom: 0 }]}>EVERWOVEN PREMIUM</Text>
+        </View>
+        <Text style={promo.title}>Unlock the full story</Text>
+        <Text style={promo.sub}>Shared vaults, intimate prompts & more</Text>
+      </View>
+      <View style={promo.pill}>
+        <Text style={promo.pillText}>Try Free</Text>
+      </View>
+    </TouchableOpacity>
   );
 }
 
-const styles = StyleSheet.create({
-  titleContainer: {
+// ─── Sub-components ──────────────────────────────────────────────────────────
+
+function DaysCounter() {
+  return (
+    <View style={days.wrapper}>
+      <View style={days.numberRow}>
+        <Text style={days.number}>{DAYS_TOGETHER}</Text>
+      </View>
+      <Text style={days.label}>DAYS WOVEN TOGETHER</Text>
+
+      {/* Couple avatars */}
+      <View style={days.avatarRow}>
+        <View style={days.avatar}>
+          <User size={24} color={Beige.muted} strokeWidth={Brand.iconStrokeWidth} />
+        </View>
+        <View style={days.dashedLine}>
+          <View style={days.dash} />
+          <Heart size={18} color="#E8A7A6" fill="#E8A7A6" strokeWidth={Brand.iconStrokeWidth} />
+          <View style={days.dash} />
+        </View>
+        <View style={days.avatar}>
+          <User size={24} color={Beige.muted} strokeWidth={Brand.iconStrokeWidth} />
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function ActionButtons({ onNewEntry }: { onNewEntry: () => void }) {
+  return (
+    <View style={act.row}>
+      <TouchableOpacity style={act.btn} onPress={onNewEntry} activeOpacity={0.8}>
+        <Plus size={24} color={Beige.text} strokeWidth={Brand.iconStrokeWidth} />
+        <Text style={act.label}>New Entry</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={act.btn} activeOpacity={0.8}>
+        <Camera size={24} color={Beige.text} strokeWidth={Brand.iconStrokeWidth} />
+        <Text style={act.label}>Add Moment</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+function ActivityCard({ item }: { item: typeof RECENT[0] }) {
+  const hasImage = !!item.imageUrl;
+  return (
+    <View style={[card.wrapper, hasImage && card.wrapperTall]}>
+      {hasImage && (
+        <Image style={card.imagePreview} source={{ uri: item.imageUrl }} />
+      )}
+      <View style={card.topRow}>
+        <Text style={card.label}>{item.label}</Text>
+        <Text style={card.meta}>{item.meta}</Text>
+      </View>
+      <Text style={card.title}>{item.title}</Text>
+      {item.shared && (
+        <View style={[card.sharedPill, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}>
+          <Heart size={12} color={Brand.blue} strokeWidth={Brand.iconStrokeWidth} />
+          <Text style={card.sharedText}>Shared</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+// ─── Screen ──────────────────────────────────────────────────────────────────
+
+export default function HomeScreen() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+
+  useEffect(() => {
+    if (!IS_SUBSCRIBED) {
+      const timer = setTimeout(() => router.push('/paywall'), 0);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  // Animated scroll value
+  const scrollY = useRef(new Animated.Value(0)).current;
+
+  // Compact navbar: fades + slides in
+  const compactNavOpacity = scrollY.interpolate({
+    inputRange: [0, COLLAPSE_THRESHOLD],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+  const compactNavTranslateY = scrollY.interpolate({
+    inputRange: [0, COLLAPSE_THRESHOLD],
+    outputRange: [-8, 0],
+    extrapolate: 'clamp',
+  });
+
+  // Large title: fades out
+  const largeTitleOpacity = scrollY.interpolate({
+    inputRange: [0, COLLAPSE_THRESHOLD * 0.6],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+
+  const compactNavHeight = insets.top + 52;
+
+  return (
+    <View style={[s.root, { backgroundColor: Beige.bg }]}>
+      <StatusBar barStyle="dark-content" />
+
+      {/* ── Compact sticky navbar ── */}
+      <Animated.View
+        style={[
+          s.compactNav,
+          {
+            height: compactNavHeight,
+            paddingTop: insets.top,
+            backgroundColor: Beige.bg,
+            opacity: compactNavOpacity,
+            transform: [{ translateY: compactNavTranslateY }],
+          },
+        ]}
+        pointerEvents="none"
+      >
+        <View style={s.compactNavInner}>
+          <Text style={s.compactNavTitle}>Home</Text>
+        </View>
+      </Animated.View>
+
+      {/* ── Scroll content ── */}
+      <Animated.ScrollView
+        contentContainerStyle={[
+          s.scroll,
+          { paddingTop: Platform.OS === 'android' ? 40 : insets.top + 8 },
+        ]}
+        showsVerticalScrollIndicator={false}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true }
+        )}
+        scrollEventThrottle={16}
+      >
+        {/* ── Large title header row (inline, fades out on scroll) ── */}
+        <Animated.View style={[s.largeHeader, { opacity: largeTitleOpacity }]}>
+          <Text style={s.largeTitleText}>Home</Text>
+          <TouchableOpacity style={s.iconBtn} onPress={() => router.push('/notifications')}>
+            <View>
+              <Bell size={24} color={Beige.text} strokeWidth={Brand.iconStrokeWidth} />
+              {HAS_NOTIFICATIONS && <View style={s.notifDot} />}
+            </View>
+          </TouchableOpacity>
+        </Animated.View>
+
+        <DaysCounter />
+        <PremiumPromoBanner onPress={() => router.push('/paywall')} />
+        <ActionButtons onNewEntry={() => router.push('/journal-entry')} />
+
+        {/* Recent Activity */}
+        <View style={s.sectionHeader}>
+          <Text style={s.sectionTitle}>Recent Activity</Text>
+          <TouchableOpacity>
+            <Text style={s.viewAll}>VIEW ALL</Text>
+          </TouchableOpacity>
+        </View>
+
+        {RECENT.map((item) => (
+          <ActivityCard key={item.id} item={item} />
+        ))}
+
+        {/* Bottom padding for floating nav */}
+        <View style={{ height: 120 }} />
+      </Animated.ScrollView>
+    </View>
+  );
+}
+
+// ─── Styles ──────────────────────────────────────────────────────────────────
+
+const s = StyleSheet.create({
+  root: { flex: 1 },
+
+  // ── Compact sticky navbar ──
+  compactNav: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#D9CEC4',
+  },
+  compactNavInner: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  compactNavTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+    color: Beige.text,
+    letterSpacing: 0.2,
+  },
+
+  // ── Large title ──
+  largeHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'space-between',
+    marginBottom: 28,
+    paddingTop: 4,
   },
-  stepContainer: {
-    gap: 8,
+  largeTitleText: {
+    fontSize: 26,
+    fontWeight: '700',
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+    color: Beige.text,
+    letterSpacing: -0.5,
+  },
+  headerIcons: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  notifDot: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 11,
+    height: 11,
+    borderRadius: 6,
+    backgroundColor: Beige.accent,
+    borderWidth: 1.5,
+    borderColor: Beige.bg,
+  },
+  iconBtn: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconText: { fontSize: 16 },
+
+  // ── Scroll ──
+  scroll: {
+    paddingHorizontal: Layout.screenPadding,
+    paddingBottom: 20,
+  },
+
+  // ── Section header ──
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 36,
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+    color: Beige.text,
+  },
+  viewAll: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.8,
+    color: Beige.muted,
+    textTransform: 'uppercase',
+  },
+});
+
+const days = StyleSheet.create({
+  wrapper: { alignItems: 'center', marginBottom: 36 },
+  numberRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  number: {
+    fontSize: 96,
+    fontWeight: '200',
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+    color: Beige.text,
+    letterSpacing: -5,
+    lineHeight: 104,
+  },
+  leaf: { fontSize: 24, marginTop: 12, marginLeft: 6 },
+  label: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 3.5,
+    color: Beige.muted,
+    textTransform: 'uppercase',
+    marginTop: 20,
+    marginBottom: 28,
+  },
+  avatarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  avatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: Beige.cardDeep,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarEmoji: { fontSize: 24 },
+  dashedLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  dash: {
+    width: 40,
+    height: 1.5,
+    backgroundColor: Beige.muted,
+    borderRadius: 1,
+  },
+  heart: { fontSize: 16 },
+});
+
+const promo = StyleSheet.create({
+  card: {
+    backgroundColor: Beige.card,
+    borderRadius: 22,
+    padding: 18,
+    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1.5,
+    borderColor: '#DDE8F2',
+    shadowColor: Beige.text,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  left: { flex: 1, paddingRight: 12 },
+  eyebrow: {
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 2,
+    color: Beige.accent,
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  title: {
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+    color: Beige.text,
+    marginBottom: 3,
+    letterSpacing: -0.3,
+  },
+  sub: {
+    fontSize: 12,
+    color: Beige.muted,
+    lineHeight: 17,
+  },
+  pill: {
+    backgroundColor: Beige.accent,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 100,
+  },
+  pillText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.2,
+  },
+});
+
+const act = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    gap: 14,
+    marginBottom: 4,
+  },
+  btn: {
+    flex: 1,
+    backgroundColor: Beige.card,
+    borderRadius: 24,
+    paddingVertical: 28,
+    alignItems: 'center',
+    gap: 12,
+    shadowColor: Beige.text,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  icon: { fontSize: 30 },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Beige.text,
+    letterSpacing: 0.2,
+  },
+});
+
+const card = StyleSheet.create({
+  wrapper: {
+    backgroundColor: Beige.card,
+    borderRadius: 22,
+    padding: 20,
+    marginBottom: 14,
+    shadowColor: Beige.text,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+    overflow: 'hidden',
+  },
+  wrapperTall: {
+    paddingBottom: 20,
+  },
+  imagePreview: {
+    width: '100%',
+    height: 160,
+    borderRadius: 16,
+    marginBottom: 16,
+    backgroundColor: Beige.cardDeep,
+  },
+  topRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  label: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 2.2,
+    color: Beige.muted,
+    textTransform: 'uppercase',
   },
+  meta: { fontSize: 12, color: Beige.muted },
+  title: {
+    fontSize: 17,
+    fontWeight: '600',
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+    color: Beige.text,
+    marginBottom: 12,
+    lineHeight: 24,
+  },
+  sharedPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: Brand.blueMuted,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 100,
+  },
+  sharedText: { fontSize: 12, color: Brand.blue, fontWeight: '600' },
 });

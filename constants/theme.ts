@@ -1,41 +1,63 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * EverWoven Design Tokens
+ * Inspired by the "Intimate Dual-Journal" Stitch design.
+ * Primary accent: Dusty blue (#6497b9)
+ * Typography: Newsreader serif for headings, system sans for UI
  */
 
 import { Platform } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
+// --- Brand Colors ---
+export const Brand = {
+  /** Primary dusty-blue accent */
+  blue: '#6497b9',
+  /** Lighter tint of accent for chips/toggles */
+  blueMuted: '#E8EFF5',
+  /** Deep navy for serif headings */
+  navy: '#1E2D3D',
+  /** Off-white app background */
+  offWhite: '#F7F8FC',
+  /** Warm white for card surfaces */
+  cardWhite: '#FFFFFF',
+  /** Muted grey for placeholder / meta text */
+  mutedGrey: '#9BA8B5',
+  /** Soft separator line color */
+  separator: '#E2E8EF',
+  /** Universal icon stroke width */
+  iconStrokeWidth: 1.5,
+};
+
+export const Layout = {
+  screenPadding: 20,
+};
+
+const tintColorLight = Brand.blue;
+const tintColorDark = '#ECEDEE';
 
 export const Colors = {
   light: {
-    text: '#11181C',
-    background: '#fff',
+    text: Brand.navy,
+    background: Brand.offWhite,
     tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
+    icon: Brand.mutedGrey,
+    tabIconDefault: Brand.mutedGrey,
     tabIconSelected: tintColorLight,
   },
   dark: {
     text: '#ECEDEE',
-    background: '#151718',
+    background: '#12161C',
     tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
+    icon: '#6B7A8D',
+    tabIconDefault: '#6B7A8D',
     tabIconSelected: tintColorDark,
   },
 };
 
 export const Fonts = Platform.select({
   ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
     sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
+    serif: 'Georgia',
     rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
     mono: 'ui-monospace',
   },
   default: {
