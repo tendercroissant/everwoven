@@ -4,7 +4,9 @@
  * and navigates to the paywall or other settings. (HMR refresh): #F4F4F8 bg, cards with subtle shadow.
  */
 
+import { PremiumPromoBanner } from '@/components/premium-promo-banner';
 import { Brand, Layout } from '@/constants/theme';
+import { useSubscription } from '@/context/subscription-context';
 import { useRouter } from 'expo-router';
 import { Heart, Settings, Sparkles, User } from 'lucide-react-native';
 import React, { useRef } from 'react';
@@ -73,29 +75,14 @@ function PremiumRow({
     );
 }
 
-function PremiumPromoBanner({ onPress }: { onPress: () => void }) {
-    return (
-        <TouchableOpacity style={promo.card} onPress={onPress} activeOpacity={0.82}>
-            <View style={promo.left}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 4 }}>
-                    <Sparkles size={11} color={Brand.blue} strokeWidth={Brand.iconStrokeWidth} />
-                    <Text style={[promo.eyebrow, { marginBottom: 0 }]}>EVERWOVEN PREMIUM</Text>
-                </View>
-                <Text style={promo.title}>Unlock your full journey</Text>
-                <Text style={promo.sub}>Insights, timelines & unlimited memories</Text>
-            </View>
-            <View style={promo.pill}>
-                <Text style={promo.pillText}>Try Free</Text>
-            </View>
-        </TouchableOpacity>
-    );
-}
+
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function ProfileScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
+    const { isPremium } = useSubscription();
 
     const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -185,7 +172,12 @@ export default function ProfileScreen() {
                 </View>
 
                 {/* Premium promo */}
-                <PremiumPromoBanner onPress={() => router.push({ pathname: '/paywall', params: { from: 'profile' } })} />
+                {!isPremium && (
+                    <PremiumPromoBanner
+                        variant="profile"
+                        onPress={() => router.push({ pathname: '/paywall', params: { from: 'profile' } })}
+                    />
+                )}
 
                 {/* Premium options */}
                 <SectionDivider label="FEATURES" />

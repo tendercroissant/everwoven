@@ -6,10 +6,12 @@
  *   • Bottom safe area removed so content flows beneath the floating nav
  */
 
+import { PremiumPromoBanner } from '@/components/premium-promo-banner';
 import { Brand, Layout } from '@/constants/theme';
+import { useSubscription } from '@/context/subscription-context';
 import { useRouter } from 'expo-router';
-import { Bell, Camera, Heart, Plus, Sparkles, User } from 'lucide-react-native';
-import React, { useEffect, useRef } from 'react';
+import { Bell, Camera, Heart, Plus, User } from 'lucide-react-native';
+import React, { useRef } from 'react';
 import {
   Animated,
   Image,
@@ -38,7 +40,6 @@ const COLLAPSE_THRESHOLD = 72;
 // ─── Mock data ───────────────────────────────────────────────────────────────
 const DAYS_TOGETHER = 740;
 const HAS_NOTIFICATIONS = true;
-const IS_SUBSCRIBED = false;
 
 const RECENT = [
   {
@@ -77,25 +78,7 @@ const RECENT = [
   },
 ];
 
-// ─── Premium promo banner ───────────────────────────────────────────────────
 
-function PremiumPromoBanner({ onPress }: { onPress: () => void }) {
-  return (
-    <TouchableOpacity style={promo.card} onPress={onPress} activeOpacity={0.82}>
-      <View style={promo.left}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 4 }}>
-          <Sparkles size={11} color={Beige.accent} strokeWidth={Brand.iconStrokeWidth} />
-          <Text style={[promo.eyebrow, { marginBottom: 0 }]}>EVERWOVEN PREMIUM</Text>
-        </View>
-        <Text style={promo.title}>Unlock the full story</Text>
-        <Text style={promo.sub}>Shared vaults, intimate prompts & more</Text>
-      </View>
-      <View style={promo.pill}>
-        <Text style={promo.pillText}>Try Free</Text>
-      </View>
-    </TouchableOpacity>
-  );
-}
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
@@ -167,13 +150,7 @@ function ActivityCard({ item }: { item: typeof RECENT[0] }) {
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-
-  useEffect(() => {
-    if (!IS_SUBSCRIBED) {
-      const timer = setTimeout(() => router.push('/paywall'), 0);
-      return () => clearTimeout(timer);
-    }
-  }, []);
+  const { isPremium } = useSubscription();
 
   // Animated scroll value
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -247,7 +224,9 @@ export default function HomeScreen() {
         </Animated.View>
 
         <DaysCounter />
-        <PremiumPromoBanner onPress={() => router.push('/paywall')} />
+        {!isPremium && (
+          <PremiumPromoBanner variant="home" onPress={() => router.push('/paywall')} />
+        )}
         <ActionButtons onNewEntry={() => router.push('/journal-entry')} />
 
         {/* Recent Activity */}

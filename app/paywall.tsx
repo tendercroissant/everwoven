@@ -1,4 +1,5 @@
 import { Layout } from '@/constants/theme';
+import { useSubscription } from '@/context/subscription-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { CheckCircle2, Infinity, Lock, MessageCircle, Smile } from 'lucide-react-native';
@@ -18,10 +19,21 @@ export default function PaywallScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
     const { width, height } = useWindowDimensions();
+    const { subscribe, restorePurchases } = useSubscription();
 
     const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly'>('yearly');
 
     const heroHeight = height * 0.28;
+
+    async function handleSubscribe() {
+        await subscribe(selectedPlan);
+        router.back();
+    }
+
+    async function handleRestore() {
+        await restorePurchases();
+        router.back();
+    }
 
     return (
         <View style={s.root}>
@@ -105,7 +117,7 @@ export default function PaywallScreen() {
                 </View>
 
                 {/* ── CTA ── */}
-                <TouchableOpacity style={s.ctaBtn} activeOpacity={0.85}>
+                <TouchableOpacity style={s.ctaBtn} activeOpacity={0.85} onPress={handleSubscribe}>
                     <Text style={s.ctaText}>Start 7-Day Free Trial</Text>
                 </TouchableOpacity>
 
@@ -117,7 +129,7 @@ export default function PaywallScreen() {
 
                 {/* ── Footer Links ── */}
                 <View style={s.footerLinks}>
-                    <TouchableOpacity><Text style={s.footerLinkText}>Restore Purchases</Text></TouchableOpacity>
+                    <TouchableOpacity onPress={handleRestore}><Text style={s.footerLinkText}>Restore Purchases</Text></TouchableOpacity>
                     <View style={s.footerSeparator} />
                     <TouchableOpacity><Text style={s.footerLinkText}>Terms</Text></TouchableOpacity>
                     <View style={s.footerSeparator} />

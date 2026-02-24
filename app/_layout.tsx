@@ -17,6 +17,7 @@ import 'react-native-reanimated';
 
 import { DynamicFloatingBar, TabName } from '@/components/dynamic-floating-bar';
 import { BarProvider } from '@/context/bar-context';
+import { SubscriptionProvider } from '@/context/subscription-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export const unstable_settings = {
@@ -53,39 +54,41 @@ export default function RootLayout() {
   }
 
   return (
-    <BarProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <View style={styles.root}>
-          <Stack>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen
-              name="journal-entry"
-              options={{ headerShown: false, animation: 'slide_from_right' }}
-            />
-            <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-            <Stack.Screen
-              name="paywall"
-              options={{ headerShown: false, presentation: 'fullScreenModal' }}
-            />
-            <Stack.Screen
-              name="settings"
-              options={{ headerShown: false, presentation: 'fullScreenModal' }}
-            />
-            <Stack.Screen
-              name="notifications"
-              options={{ headerShown: false, presentation: 'fullScreenModal' }}
-            />
-          </Stack>
+    <SubscriptionProvider>
+      <BarProvider>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <View style={styles.root}>
+            <Stack>
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen
+                name="journal-entry"
+                options={{ headerShown: false, animation: 'slide_from_right' }}
+              />
+              <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+              <Stack.Screen
+                name="paywall"
+                options={{ headerShown: false, presentation: 'fullScreenModal' }}
+              />
+              <Stack.Screen
+                name="settings"
+                options={{ headerShown: false, presentation: 'fullScreenModal' }}
+              />
+              <Stack.Screen
+                name="notifications"
+                options={{ headerShown: false, presentation: 'fullScreenModal' }}
+              />
+            </Stack>
 
-          {/* Single floating bar — lives above all screens except full-screen modals */}
-          {!pathname.includes('/paywall') && !pathname.includes('/settings') && !pathname.includes('/notifications') && (
-            <DynamicFloatingBar activeTab={activeTab} onTabPress={handleTabPress} />
-          )}
-        </View>
+            {/* Single floating bar — lives above all screens except full-screen modals */}
+            {!pathname.includes('/paywall') && !pathname.includes('/settings') && !pathname.includes('/notifications') && (
+              <DynamicFloatingBar activeTab={activeTab} onTabPress={handleTabPress} />
+            )}
+          </View>
 
-        <StatusBar style="auto" />
-      </ThemeProvider>
-    </BarProvider>
+          <StatusBar style="auto" />
+        </ThemeProvider>
+      </BarProvider>
+    </SubscriptionProvider>
   );
 }
 
