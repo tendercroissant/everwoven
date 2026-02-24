@@ -12,7 +12,7 @@
 import { Brand } from '@/constants/theme';
 import { useBar } from '@/context/bar-context';
 import * as Haptics from 'expo-haptics';
-import { BookHeart, CalendarDays, Home, MessageCircle, User } from 'lucide-react-native';
+import { BookHeart, CalendarDays, Home, Spool, User } from 'lucide-react-native';
 import React, { useEffect, useRef } from 'react';
 import {
     Animated,
@@ -55,7 +55,7 @@ const TABS = [
     { name: 'home' as const, icon: Home },
     { name: 'calendar' as const, icon: CalendarDays },
     { name: 'memories' as const, icon: BookHeart },
-    { name: 'messages' as const, icon: MessageCircle },
+    { name: 'messages' as const, icon: Spool },
     { name: 'profile' as const, icon: User },
 ] as const;
 

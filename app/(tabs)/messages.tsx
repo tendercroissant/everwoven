@@ -1,15 +1,24 @@
 /**
- * Messages Screen — "Couples Messages Feed"
- * Mirrors Journal List structure: iOS-style large title, compact nav on scroll,
- * conversation cards with RECENT/EARLIER sections.
+ * Messages Screen — "The Thread"
+ * Overview screen showing conversation stats, daily prompts,
+ * and the list of threads. Tapping a prompt pre-fills it in
+ * the Thread screen. Tapping a conversation opens the Thread.
+ *
+ * Layout:
+ *  • iOS-style collapsing large title
+ *  • Stats chips row (messages, streak, prompts used)
+ *  • Horizontally-scrollable daily prompt cards
+ *  • Sectioned conversation list
  */
 
 import { Brand, Layout } from '@/constants/theme';
-import { Search, User } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { Flame, MessageCircle, Sparkles } from 'lucide-react-native';
 import React, { useRef } from 'react';
 import {
     Animated,
     Platform,
+    ScrollView,
     StatusBar,
     StyleSheet,
     Text,
@@ -19,12 +28,15 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // ─── Palette ─────────────────────────────────────────────────────────────────
+
 const C = {
     bg: '#F4F4F8',
     card: '#FFFFFF',
     text: Brand.navy,
     muted: Brand.mutedGrey,
     divider: Brand.separator,
+    accent: Brand.blue,
+    accentMuted: Brand.blueMuted,
 };
 
 const COLLAPSE_THRESHOLD = 72;
@@ -45,6 +57,20 @@ interface Section {
 }
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
+
+const STATS = {
+    totalMessages: 1248,
+    streakDays: 14,
+    promptsUsed: 32,
+};
+
+const DAILY_PROMPTS = [
+    { id: 'p1', emoji: '☕', text: 'What made you smile today?' },
+    { id: 'p2', emoji: '🌿', text: "Something you've been meaning to share?" },
+    { id: 'p3', emoji: '💭', text: 'What are you looking forward to this week?' },
+    { id: 'p4', emoji: '🌙', text: 'How are you really feeling right now?' },
+    { id: 'p5', emoji: '✨', text: 'Name one thing you appreciate about us.' },
+];
 
 const MESSAGES_DATA: Section[] = [
     {
@@ -86,6 +112,42 @@ const MESSAGES_DATA: Section[] = [
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
+function StatChip({
+    icon,
+    value,
+    label,
+}: {
+    icon: React.ReactNode;
+    value: string;
+    label: string;
+}) {
+    return (
+        <View style={chip.wrapper}>
+            <View style={chip.iconWrap}>{icon}</View>
+            <Text style={chip.value}>{value}</Text>
+            <Text style={chip.label}>{label}</Text>
+        </View>
+    );
+}
+
+function PromptCard({
+    prompt,
+    onPress,
+}: {
+    prompt: typeof DAILY_PROMPTS[0];
+    onPress: () => void;
+}) {
+    return (
+        <TouchableOpacity style={pc.card} onPress={onPress} activeOpacity={0.82}>
+            <Text style={pc.emoji}>{prompt.emoji}</Text>
+            <Text style={pc.text}>{prompt.text}</Text>
+            <View style={pc.sendPill}>
+                <Text style={pc.sendText}>Send</Text>
+            </View>
+        </TouchableOpacity>
+    );
+}
+
 function SectionDivider({ label }: { label: string }) {
     return (
         <View style={sd.row}>
@@ -95,23 +157,39 @@ function SectionDivider({ label }: { label: string }) {
     );
 }
 
-function ConversationCard({ conv, onPress }: { conv: Conversation; onPress: () => void }) {
+function ConversationCard({
+    conv,
+    onPress,
+}: {
+    conv: Conversation;
+    onPress: () => void;
+}) {
     return (
-        <TouchableOpacity style={cc.cardWrapper} onPress={onPress} activeOpacity={0.85}>
-            <View style={cc.topRow}>
-                <View style={cc.avatarRow}>
-                    <View style={cc.avatar}>
-                        <User size={22} color={C.muted} strokeWidth={Brand.iconStrokeWidth} />
-                    </View>
-                    <View style={cc.nameCol}>
-                        <Text style={cc.name} numberOfLines={1}>{conv.name}</Text>
-                        <Text style={cc.preview} numberOfLines={1}>{conv.lastMessage}</Text>
-                    </View>
+        <TouchableOpacity style={cc.card} onPress={onPress} activeOpacity={0.85}>
+            {/* Avatar */}
+            <View style={cc.avatar}>
+                <Text style={cc.avatarInitial}>
+                    {conv.name.charAt(0).toUpperCase()}
+                </Text>
+                {conv.unread && <View style={cc.unreadRing} />}
+            </View>
+
+            {/* Text */}
+            <View style={cc.nameCol}>
+                <View style={cc.nameRow}>
+                    <Text style={[cc.name, conv.unread && cc.nameUnread]} numberOfLines={1}>
+                        {conv.name}
+                    </Text>
+                    <Text style={[cc.timestamp, conv.unread && cc.timestampUnread]}>
+                        {conv.timestamp}
+                    </Text>
                 </View>
-                <View style={cc.rightCol}>
-                    <Text style={cc.timestamp}>{conv.timestamp}</Text>
-                    {conv.unread && <View style={cc.unreadDot} />}
-                </View>
+                <Text
+                    style={[cc.preview, conv.unread && cc.previewUnread]}
+                    numberOfLines={1}
+                >
+                    {conv.lastMessage}
+                </Text>
             </View>
         </TouchableOpacity>
     );
@@ -120,8 +198,8 @@ function ConversationCard({ conv, onPress }: { conv: Conversation; onPress: () =
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function MessagesScreen() {
+    const router = useRouter();
     const insets = useSafeAreaInsets();
-
     const scrollY = useRef(new Animated.Value(0)).current;
 
     const compactNavOpacity = scrollY.interpolate({
@@ -141,10 +219,18 @@ export default function MessagesScreen() {
     });
     const compactNavHeight = insets.top + 52;
 
+    function openThread(convId: string, convName: string, prompt?: string) {
+        router.push({
+            pathname: '/thread',
+            params: { id: convId, name: convName, ...(prompt ? { prompt } : {}) },
+        });
+    }
+
     return (
         <View style={s.root}>
             <StatusBar barStyle="dark-content" />
 
+            {/* ── Compact sticky navbar ── */}
             <Animated.View
                 style={[
                     s.compactNav,
@@ -162,6 +248,7 @@ export default function MessagesScreen() {
                 </View>
             </Animated.View>
 
+            {/* ── Scroll content ── */}
             <Animated.ScrollView
                 contentContainerStyle={[
                     s.scroll,
@@ -174,13 +261,52 @@ export default function MessagesScreen() {
                 )}
                 scrollEventThrottle={16}
             >
+                {/* ── Large title ── */}
                 <Animated.View style={[s.largeHeader, { opacity: largeTitleOpacity }]}>
                     <Text style={s.largeTitleText}>Messages</Text>
-                    <TouchableOpacity style={s.searchBtn}>
-                        <Search color={C.text} size={24} strokeWidth={Brand.iconStrokeWidth} />
-                    </TouchableOpacity>
                 </Animated.View>
 
+                {/* ── Stats chips ── */}
+                <View style={s.statsRow}>
+                    <StatChip
+                        icon={<MessageCircle size={16} color={C.accent} strokeWidth={2} />}
+                        value={STATS.totalMessages.toLocaleString()}
+                        label="messages"
+                    />
+                    <View style={s.statsDivider} />
+                    <StatChip
+                        icon={<Flame size={16} color="#E8855A" strokeWidth={2} />}
+                        value={`${STATS.streakDays}d`}
+                        label="streak"
+                    />
+                    <View style={s.statsDivider} />
+                    <StatChip
+                        icon={<Sparkles size={16} color={C.accent} strokeWidth={2} />}
+                        value={String(STATS.promptsUsed)}
+                        label="prompts"
+                    />
+                </View>
+
+                {/* ── Daily Prompts ── */}
+                <View style={s.sectionHeader}>
+                    <Text style={s.sectionTitle}>TODAY'S PROMPTS</Text>
+                </View>
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={s.promptsScroll}
+                    style={s.promptsScrollTrack}
+                >
+                    {DAILY_PROMPTS.map((p) => (
+                        <PromptCard
+                            key={p.id}
+                            prompt={p}
+                            onPress={() => openThread('1', 'Morning thoughts 💭', p.text)}
+                        />
+                    ))}
+                </ScrollView>
+
+                {/* ── Conversation sections ── */}
                 {MESSAGES_DATA.map((section) => (
                     <View key={section.label}>
                         <SectionDivider label={section.label} />
@@ -188,7 +314,7 @@ export default function MessagesScreen() {
                             <ConversationCard
                                 key={conv.id}
                                 conv={conv}
-                                onPress={() => { }}
+                                onPress={() => openThread(conv.id, conv.name)}
                             />
                         ))}
                     </View>
@@ -204,21 +330,16 @@ export default function MessagesScreen() {
 
 const s = StyleSheet.create({
     root: { flex: 1, backgroundColor: C.bg },
+
     compactNav: {
         position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
+        top: 0, left: 0, right: 0,
         zIndex: 10,
         backgroundColor: C.bg,
         borderBottomWidth: StyleSheet.hairlineWidth,
         borderBottomColor: C.divider,
     },
-    compactNavInner: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
+    compactNavInner: { flex: 1, alignItems: 'center', justifyContent: 'center' },
     compactNavTitle: {
         fontSize: 17,
         fontWeight: '700',
@@ -226,11 +347,12 @@ const s = StyleSheet.create({
         color: C.text,
         letterSpacing: 0.2,
     },
+
     largeHeader: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginBottom: 28,
+        marginBottom: 20,
         paddingTop: 4,
     },
     largeTitleText: {
@@ -240,13 +362,104 @@ const s = StyleSheet.create({
         color: C.text,
         letterSpacing: -0.5,
     },
-    searchBtn: {
-        width: 44,
-        height: 44,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
+
     scroll: { paddingHorizontal: Layout.screenPadding, paddingBottom: 20 },
+
+    // ── Stats ──
+    statsRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: C.card,
+        borderRadius: 20,
+        paddingVertical: 16,
+        paddingHorizontal: 20,
+        marginBottom: 28,
+        shadowColor: '#1E2D3D',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 10,
+        elevation: 2,
+    },
+    statsDivider: {
+        width: 1,
+        height: 32,
+        backgroundColor: C.divider,
+        marginHorizontal: 16,
+    },
+
+    // ── Section header ──
+    sectionHeader: { marginBottom: 10 },
+    sectionTitle: {
+        fontSize: 11,
+        fontWeight: '700',
+        letterSpacing: 1.8,
+        color: C.muted,
+    },
+
+    // ── Prompts ──
+    promptsScrollTrack: { marginHorizontal: -Layout.screenPadding, marginBottom: 8 },
+    promptsScroll: {
+        paddingHorizontal: Layout.screenPadding,
+        paddingBottom: 4,
+        gap: 12,
+    },
+});
+
+const chip = StyleSheet.create({
+    wrapper: { flex: 1, alignItems: 'center', gap: 4 },
+    iconWrap: { marginBottom: 2 },
+    value: {
+        fontSize: 20,
+        fontWeight: '700',
+        fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+        color: C.text,
+        letterSpacing: -0.5,
+    },
+    label: {
+        fontSize: 11,
+        fontWeight: '500',
+        color: C.muted,
+        textTransform: 'lowercase',
+    },
+});
+
+const pc = StyleSheet.create({
+    card: {
+        width: 160,
+        backgroundColor: C.card,
+        borderRadius: 20,
+        padding: 18,
+        borderWidth: 1.5,
+        borderColor: '#DDE8F2',
+        shadowColor: '#1E2D3D',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 2,
+        gap: 8,
+    },
+    emoji: { fontSize: 24 },
+    text: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: C.text,
+        lineHeight: 20,
+        fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+    },
+    sendPill: {
+        alignSelf: 'flex-start',
+        backgroundColor: C.accentMuted,
+        paddingHorizontal: 12,
+        paddingVertical: 5,
+        borderRadius: 100,
+        marginTop: 4,
+    },
+    sendText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: C.accent,
+        letterSpacing: 0.2,
+    },
 });
 
 const sd = StyleSheet.create({
@@ -254,7 +467,7 @@ const sd = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 10,
-        marginBottom: 14,
+        marginBottom: 12,
         marginTop: 24,
     },
     label: {
@@ -268,48 +481,63 @@ const sd = StyleSheet.create({
 });
 
 const cc = StyleSheet.create({
-    cardWrapper: {
+    card: {
         backgroundColor: C.card,
         borderRadius: 20,
-        marginBottom: 14,
-        paddingHorizontal: 20,
-        paddingVertical: 18,
-        shadowColor: '#2C2018',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.07,
-        shadowRadius: 10,
-        elevation: 3,
-    },
-    topRow: {
+        marginBottom: 12,
+        padding: 16,
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        gap: 14,
+        shadowColor: '#1E2D3D',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 10,
+        elevation: 2,
     },
-    avatarRow: { flexDirection: 'row', alignItems: 'center', flex: 1 },
     avatar: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        backgroundColor: C.accentMuted,
         alignItems: 'center',
         justifyContent: 'center',
-        paddingHorizontal: Layout.screenPadding,
-        marginRight: 14,
+        position: 'relative',
+    },
+    avatarInitial: {
+        fontSize: 20,
+        fontWeight: '700',
+        color: C.accent,
+        fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+    },
+    unreadRing: {
+        position: 'absolute',
+        bottom: 0, right: 0,
+        width: 14,
+        height: 14,
+        borderRadius: 7,
+        backgroundColor: C.accent,
+        borderWidth: 2,
+        borderColor: C.bg,
     },
     nameCol: { flex: 1 },
-    name: {
-        fontSize: 18,
-        fontWeight: '700',
-        fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
-        color: C.text,
+    nameRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         marginBottom: 4,
     },
-    preview: { fontSize: 14, color: C.muted, lineHeight: 20 },
-    rightCol: { alignItems: 'flex-end', marginLeft: 12 },
-    timestamp: { fontSize: 12, color: C.muted, marginBottom: 4 },
-    unreadDot: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-        backgroundColor: Brand.blue,
+    name: {
+        fontSize: 16,
+        fontWeight: '600',
+        fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+        color: C.text,
+        flex: 1,
+        marginRight: 8,
     },
+    nameUnread: { fontWeight: '700' },
+    timestamp: { fontSize: 12, color: C.muted, fontWeight: '500' },
+    timestampUnread: { color: C.accent, fontWeight: '700' },
+    preview: { fontSize: 13, color: C.muted, lineHeight: 18 },
+    previewUnread: { color: C.text, fontWeight: '500' },
 });

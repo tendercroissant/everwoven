@@ -64,6 +64,10 @@ export default function RootLayout() {
                 name="journal-entry"
                 options={{ headerShown: false, animation: 'slide_from_right' }}
               />
+              <Stack.Screen
+                name="thread"
+                options={{ headerShown: false, animation: 'slide_from_right' }}
+              />
               <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
               <Stack.Screen
                 name="paywall"
@@ -80,7 +84,7 @@ export default function RootLayout() {
             </Stack>
 
             {/* Single floating bar — lives above all screens except full-screen modals */}
-            {!pathname.includes('/paywall') && !pathname.includes('/settings') && !pathname.includes('/notifications') && (
+            {!pathname.includes('/paywall') && !pathname.includes('/settings') && !pathname.includes('/notifications') && !pathname.includes('/thread') && (
               <DynamicFloatingBar activeTab={activeTab} onTabPress={handleTabPress} />
             )}
           </View>
