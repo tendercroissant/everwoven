@@ -10,7 +10,7 @@ import { PremiumPromoBanner } from '@/components/premium-promo-banner';
 import { Brand, Layout } from '@/constants/theme';
 import { useSubscription } from '@/context/subscription-context';
 import { useRouter } from 'expo-router';
-import { Bell, Camera, Heart, Plus, User } from 'lucide-react-native';
+import { Bell, CalendarDays, Heart, Image as ImageIcon, Mic, User } from 'lucide-react-native';
 import React, { useRef } from 'react';
 import {
   Animated,
@@ -108,17 +108,42 @@ function DaysCounter() {
   );
 }
 
-function ActionButtons({ onNewEntry }: { onNewEntry: () => void }) {
+// ─── Quick Actions ───────────────────────────────────────────────────────────
+
+interface QuickAction {
+  id: string;
+  label: string;
+  Icon: React.ComponentType<{ size: number; color: string; fill?: string; strokeWidth: number }>;
+  iconColor: string;
+  iconFill?: string;
+}
+
+const QUICK_ACTIONS: QuickAction[] = [
+  { id: 'hug', label: 'Send Hug', Icon: Heart, iconColor: Beige.text },
+  { id: 'voice', label: 'Voice Note', Icon: Mic, iconColor: Beige.text },
+  { id: 'photo', label: 'Share Photo', Icon: ImageIcon, iconColor: Beige.text },
+  { id: 'date', label: 'Plan Date', Icon: CalendarDays, iconColor: Beige.text },
+];
+
+function QuickActions() {
   return (
-    <View style={act.row}>
-      <TouchableOpacity style={act.btn} onPress={onNewEntry} activeOpacity={0.8}>
-        <Plus size={24} color={Beige.text} strokeWidth={Brand.iconStrokeWidth} />
-        <Text style={act.label}>New Entry</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={act.btn} activeOpacity={0.8}>
-        <Camera size={24} color={Beige.text} strokeWidth={Brand.iconStrokeWidth} />
-        <Text style={act.label}>Add Moment</Text>
-      </TouchableOpacity>
+    <View style={act.section}>
+      <Text style={act.sectionLabel}>QUICK ACTIONS</Text>
+      <View style={act.row}>
+        {QUICK_ACTIONS.map(({ id, label, Icon, iconColor, iconFill }) => (
+          <TouchableOpacity key={id} style={act.btn} activeOpacity={0.75}>
+            <View style={act.circle}>
+              <Icon
+                size={22}
+                color={iconColor}
+                fill={iconFill ?? 'none'}
+                strokeWidth={Brand.iconStrokeWidth}
+              />
+            </View>
+            <Text style={act.label}>{label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
     </View>
   );
 }
@@ -227,7 +252,7 @@ export default function HomeScreen() {
         {!isPremium && (
           <PremiumPromoBanner variant="home" onPress={() => router.push('/paywall')} />
         )}
-        <ActionButtons onNewEntry={() => router.push('/journal-entry')} />
+        <QuickActions />
 
         {/* Recent Activity */}
         <View style={s.sectionHeader}>
@@ -449,30 +474,45 @@ const promo = StyleSheet.create({
 });
 
 const act = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    gap: 14,
+  section: {
     marginBottom: 4,
   },
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.8,
+    color: Beige.muted,
+    textTransform: 'uppercase',
+    marginBottom: 14,
+  },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
   btn: {
-    flex: 1,
-    backgroundColor: Beige.card,
-    borderRadius: 24,
-    paddingVertical: 28,
     alignItems: 'center',
-    gap: 12,
+    gap: 8,
+    flex: 1,
+  },
+  circle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: Beige.card,
+    alignItems: 'center',
+    justifyContent: 'center',
     shadowColor: Beige.text,
-    shadowOffset: { width: 0, height: 3 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
-    shadowRadius: 10,
+    shadowRadius: 8,
     elevation: 3,
   },
-  icon: { fontSize: 30 },
   label: {
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: '600',
     color: Beige.text,
-    letterSpacing: 0.2,
+    textAlign: 'center',
+    letterSpacing: 0.1,
   },
 });
 
